@@ -12,7 +12,7 @@ for root, ds, fs in os.walk(train_path):
     
     arr.sort()
     for i in range(0, 1000):
-        filepath = os.path.join(root, arr[i])
+        filepath = os.path.join(root, arr[i]) 
         #print(filepath)
         list = os.listdir(filepath)
         for j in range(len(list)):

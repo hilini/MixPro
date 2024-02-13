@@ -106,7 +106,7 @@ def deit_tiny_distilled_patch16_224(pretrained=False, **kwargs):
             map_location="cpu", check_hash=True
         )
         model.load_state_dict(checkpoint["model"])
-    return model
+    return model 
 
 
 @register_model

@@ -1,4 +1,4 @@
-
+import math
 import os
 import time
 import random
@@ -74,7 +74,8 @@ def parse_option():
 
 
 def main(config):
-    dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config)
+    #dataset_train, dataset_val, data_loader_train, data_loader_val, mixup_fn = build_loader(config)
+    dsets, dset_loaders= build_loader(config)
 
     logger.info(f"Creating model:{config.MODEL.TYPE}/{config.MODEL.NAME}")
     model = build_model(config)
@@ -91,9 +92,9 @@ def main(config):
     logger.info(f"number of params: {n_parameters}")
     if hasattr(model_without_ddp, 'flops'):
         flops = model_without_ddp.flops()
-        logger.info(f"number of GFLOPs: {flops / 1e9}")
+        logger.info(f"number of GFLOPs: {flops / 1e9}") 
 
-    lr_scheduler = build_scheduler(config, optimizer, len(data_loader_train))
+    lr_scheduler = build_scheduler(config, optimizer, len(dset_loaders['source_train']))
 
     if config.AUG.MIXUP > 0.:
         # smoothing is handled with mixup label transform
@@ -121,29 +122,29 @@ def main(config):
 
     if config.MODEL.RESUME:
         max_accuracy = load_checkpoint(config, model_without_ddp, optimizer, lr_scheduler, scaler, logger)
-        acc1, acc5, loss = validate(config, data_loader_val, model)
-        logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
+        acc1, acc5, loss = validate(config, dset_loaders['target_train'], model)
+        logger.info(f"Accuracy of the network on the {len(['target_train'])} test images: {acc1:.1f}%")
         if config.EVAL_MODE:
             return
 
     if config.MODEL.PRETRAINED and (not config.MODEL.RESUME):
-        logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
+        logger.info(f"Accuracy of the network on the {len(['target_train'])} test images: {acc1:.1f}%")
 
     if config.THROUGHPUT_MODE:
-        throughput(data_loader_val, model, logger)
+        throughput(dset_loaders['target_train'], model, logger)
         return
 
     logger.info("Start training")
     start_time = time.time()
     for epoch in range(config.TRAIN.START_EPOCH, config.TRAIN.EPOCHS):
-        data_loader_train.sampler.set_epoch(epoch)
+        dset_loaders['source_train'].sampler.set_epoch(epoch)
 
-        train_one_epoch(config, model, criterion, data_loader_train, optimizer, epoch, mixup_fn, lr_scheduler)
+        train_one_epoch(config, model, criterion, dset_loaders['source_train'], optimizer, epoch,lr_scheduler)
         if dist.get_rank() == 0 and (epoch % config.SAVE_FREQ == 0 or epoch == (config.TRAIN.EPOCHS - 1)):
             save_checkpoint(config, epoch, model_without_ddp, max_accuracy, optimizer, lr_scheduler, scaler, logger)
 
-        acc1, acc5, loss = validate(config, data_loader_val, model)
-        logger.info(f"Accuracy of the network on the {len(dataset_val)} test images: {acc1:.1f}%")
+        acc1, acc5, loss = validate(config, dset_loaders['target_train'], model)
+        logger.info(f"Accuracy of the network on the {len(['target_train'])} test images: {acc1:.1f}%")
         max_accuracy = max(max_accuracy, acc1)
         logger.info(f'Max accuracy: {max_accuracy:.2f}%')
 
@@ -204,7 +205,7 @@ def train_one_epoch(config, model, criterion, data_loader, optimizer, epoch, mix
             else:
                 maskmix = False
         if maskmix == False:
-            samples, mix_targets = mixup_fn(samples, targets)
+            samples, mix_targets = mixup_fn(samples, targets) 
         if maskmix:
             samples, mix_targets, mask, mask_ratio = MaskMix(samples, flip_samples, alpha, mask_num, scale_, scale, targets, flip_targets, label_smoothing, num_classes)
         else:

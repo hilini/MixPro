@@ -21,10 +21,10 @@ _C.DATA = CN()
 # Batch size for a single GPU, could be overwritten by command line argument
 _C.DATA.BATCH_SIZE = 128
 # Path to dataset, could be overwritten by command line argument
-_C.DATA.DATA_PATH = '../data/Imagenet/'
-    
+_C.DATA.DATA_PATH = '../data/pacs/'
+     
 # Dataset name
-_C.DATA.DATASET = 'imagenet'
+_C.DATA.DATASET = 'pacs'
 # Input image size
 _C.DATA.IMG_SIZE = 224
 # Interpolation to resize image (random, bilinear, bicubic)
@@ -288,6 +288,8 @@ def update_config(config, args):
         config.EVAL_MODE = True
     if args.throughput:
         config.THROUGHPUT_MODE = True
+    #if args.model_params:
+     #   config.MODEL_PARAMS = True
 
     # set local rank for distributed training
     config.LOCAL_RANK = args.local_rank
